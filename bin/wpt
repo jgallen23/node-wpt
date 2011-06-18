@@ -1,0 +1,60 @@
+#!/usr/bin/env node
+
+
+var args = require('argsparser').parse();
+var fs = require('fs');
+var path = require('path');
+var WPT = require('../');
+var winston = require("winston");
+var async = require("async");
+var str = require("str.js");
+var cwd = process.cwd();
+
+var config = (function(file) {
+  var json = fs.readFileSync(file);
+  return JSON.parse(json);
+}(args['--config'] || path.join(cwd, 'config.json')));
+
+var infoLog = new (winston.Logger)({
+  transports: [
+    new (winston.transports.Console)()
+  ]
+});
+
+
+var dataLog = new (winston.Logger)({
+  transports: [
+    new (winston.transports.Console)()
+  ]
+});
+
+var wpt = new WPT(config.apikey);
+
+wpt.on("startTest", function(options, data) {
+  infoLog.info(str.format("Test Started: {url} {id}", { url: options.url, id: data.data.testId }));
+});
+
+wpt.on("endTest", function(results) {
+  infoLog.info(str.format("Test Complete: {url} {id}", { url: results.testUrl, id: results.testId }));
+});
+
+wpt.on("endBatch", function(batchResults) {
+  
+  for (var i = 0, c = batchResults.length; i < c; i++) {
+    var testResult = batchResults[i];
+    dataLog.info("testResult", {
+      testId: testResult.testId,
+      summary: testResult.summary,
+      url: testResult.testUrl,
+      completed: testResult.completed,
+      stats: testResult.average
+    });
+  }
+
+});
+
+infoLog.info("Starting batch, this may take awhile");
+wpt.runBatch(config.urls, function(batchResults) {
+  infoLog.info("Completed batch");
+});
+
