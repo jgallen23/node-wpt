@@ -8,6 +8,7 @@ var WPT = require('../');
 var winston = require("winston");
 var async = require("async");
 var str = require("str.js");
+var Splunk = require('../lib/splunk').Splunk;
 var cwd = process.cwd();
 
 var config = (function(file) {
@@ -15,17 +16,23 @@ var config = (function(file) {
   return JSON.parse(json);
 }(args['--config'] || path.join(cwd, 'config.json')));
 
+
+var transports = [
+  //new (winston.transports.Console)()
+];
+
+if (config.transports.splunk) {
+  transports.push(new Splunk(config.transports.splunk));
+}
+
 var infoLog = new (winston.Logger)({
   transports: [
     new (winston.transports.Console)()
   ]
 });
 
-
 var dataLog = new (winston.Logger)({
-  transports: [
-    new (winston.transports.Console)()
-  ]
+  transports: transports 
 });
 
 var wpt = new WPT(config.apikey);
@@ -34,27 +41,22 @@ wpt.on("startTest", function(options, data) {
   infoLog.info(str.format("Test Started: {url} {id}", { url: options.url, id: data.data.testId }));
 });
 
-wpt.on("endTest", function(results) {
-  infoLog.info(str.format("Test Complete: {url} {id}", { url: results.testUrl, id: results.testId }));
-});
-
-wpt.on("endBatch", function(batchResults) {
-  
-  for (var i = 0, c = batchResults.length; i < c; i++) {
-    var testResult = batchResults[i];
-    dataLog.info("testResult", {
-      testId: testResult.testId,
-      summary: testResult.summary,
-      url: testResult.testUrl,
-      completed: testResult.completed,
-      stats: testResult.average
-    });
-  }
-
+wpt.on("endTest", function(testResult) {
+  infoLog.info(str.format("Test Complete: {url} {id} {summary}", { url: testResult.testUrl, id: testResult.testId, summary: testResult.summar }));
+  dataLog.info("testResult", {
+    testId: testResult.testId,
+    summary: testResult.summary,
+    url: testResult.testUrl,
+    completed: new Date(testResult.completed).getTime(),
+    firstView: testResult.run.firstView.results,
+    repeatView: testResult.run.repeatView.results
+  });
 });
 
 infoLog.info("Starting batch, this may take awhile");
-wpt.runBatch(config.urls, function(batchResults) {
-  infoLog.info("Completed batch");
-});
+var runBatch = function() {
+  wpt.runBatch(config.urls);
+};
+//runBatch();
+wpt.getResults("110614_6A_TW3Q");
 
