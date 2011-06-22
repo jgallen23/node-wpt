@@ -6,7 +6,6 @@ var fs = require('fs');
 var path = require('path');
 var WPT = require('../');
 var winston = require("winston");
-var async = require("async");
 var str = require("str.js");
 var Splunk = require('../lib/splunk').Splunk;
 var cwd = process.cwd();
@@ -42,7 +41,7 @@ wpt.on("startTest", function(options, data) {
 });
 
 wpt.on("endTest", function(testResult) {
-  infoLog.info(str.format("Test Complete: {url} {id} {summary}", { url: testResult.testUrl, id: testResult.testId, summary: testResult.summar }));
+  infoLog.info(str.format("Test Complete: {url} {id} {summary}", { url: testResult.testUrl, id: testResult.testId, summary: testResult.summary }));
   dataLog.info("testResult", {
     testId: testResult.testId,
     summary: testResult.summary,
@@ -57,6 +56,5 @@ infoLog.info("Starting batch, this may take awhile");
 var runBatch = function() {
   wpt.runBatch(config.urls);
 };
-//runBatch();
-wpt.getResults("110614_6A_TW3Q");
-
+runBatch();
+//wpt.getResults("110614_6A_TW3Q");
