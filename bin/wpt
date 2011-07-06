@@ -42,14 +42,36 @@ wpt.on("startTest", function(options, data) {
 
 wpt.on("endTest", function(testResult) {
   infoLog.info(str.format("Test Complete: {url} {id} {summary}", { url: testResult.testUrl, id: testResult.testId, summary: testResult.summary }));
-  dataLog.info("testResult", {
-    testId: testResult.testId,
-    summary: testResult.summary,
-    url: testResult.testUrl,
-    completed: new Date(testResult.completed).getTime(),
-    firstView: testResult.run.firstView.results,
-    repeatView: testResult.run.repeatView.results
-  });
+  try {
+
+    if (testResult.run.firstView.results.docTime != 0) {
+      dataLog.info("firstView", {
+        testId: testResult.testId,
+        summary: testResult.summary,
+        url: testResult.testUrl,
+        completed: new Date(testResult.completed).getTime(),
+        results: testResult.run.firstView.results,
+        images: testResult.run.firstView.images
+      });
+      dataLog.info("repeatView", {
+        testId: testResult.testId,
+        summary: testResult.summary,
+        url: testResult.testUrl,
+        completed: new Date(testResult.completed).getTime(),
+        results: testResult.run.repeatView.results,
+        images: testResult.run.repeatView.images
+      });
+    } else {
+      dataLog.error("timeout", {
+        testId: testResult.testId,
+        summary: testResult.summary,
+        url: testResult.testUrl
+      });
+    }
+  } catch(e) {
+    console.log(e.description);
+    infoLog.error(e.description);
+  }
 });
 
 infoLog.info("Starting batch, this may take awhile");
