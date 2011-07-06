@@ -20,7 +20,7 @@ var transports = [
   //new (winston.transports.Console)()
 ];
 
-if (config.transports.splunk) {
+if (config.transports && config.transports.splunk) {
   transports.push(new Splunk(config.transports.splunk));
 }
 
@@ -35,6 +35,17 @@ var dataLog = new (winston.Logger)({
 });
 
 var wpt = new WPT(config.apikey);
+
+var logHarFile = function(testId) {
+  if (config.logHarFile === true) {
+    wpt.getHARFile(testId, function(json) {
+      for (var i = 0, c = json.log.entries.length; i < c; i++) {
+        var entry = json.log.entries[i];
+        dataLog.info("har", { url: entry.request.url, size: entry.response.bodySize, time: entry.time, status: entry.response.status });
+      }
+    });
+  }
+};
 
 wpt.on("startTest", function(options, data) {
   infoLog.info(str.format("Test Started: {url} {id}", { url: options.url, id: data.data.testId }));
@@ -61,6 +72,7 @@ wpt.on("endTest", function(testResult) {
         results: testResult.run.repeatView.results,
         images: testResult.run.repeatView.images
       });
+      logHarFile(testResult.testId);
     } else {
       dataLog.error("timeout", {
         testId: testResult.testId,
@@ -80,3 +92,4 @@ var runBatch = function() {
 };
 runBatch();
 //wpt.getResults("110614_6A_TW3Q");
+//logHarFile("110614_6A_TW3Q");
