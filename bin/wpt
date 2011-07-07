@@ -41,7 +41,7 @@ var logHarFile = function(testId) {
     wpt.getHARFile(testId, function(json) {
       for (var i = 0, c = json.log.entries.length; i < c; i++) {
         var entry = json.log.entries[i];
-        dataLog.info("har", { url: entry.request.url, size: entry.response.bodySize, time: entry.time, status: entry.response.status });
+        dataLog.info("har", { testId: testId, url: entry.request.url, size: entry.response.bodySize, time: entry.time, status: entry.response.status });
       }
     });
   }
