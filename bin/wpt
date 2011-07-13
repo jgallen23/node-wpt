@@ -36,12 +36,12 @@ var dataLog = new (winston.Logger)({
 
 var wpt = new WPT(config.apikey);
 
-var logHarFile = function(testId) {
+var logHarFile = function(testId, url) {
   if (config.logHarFile === true) {
     wpt.getHARFile(testId, function(json) {
       for (var i = 0, c = json.log.entries.length; i < c; i++) {
         var entry = json.log.entries[i];
-        dataLog.info("har", { testId: testId, url: entry.request.url, size: entry.response.bodySize, time: entry.time, status: entry.response.status });
+        dataLog.info("har", { testId: testId, testUrl: url, url: entry.request.url, size: entry.response.bodySize, time: entry.time, status: entry.response.status });
       }
     });
   }
@@ -64,15 +64,6 @@ wpt.on("endTest", function(testResult) {
         results: testResult.run.firstView.results,
         images: testResult.run.firstView.images
       });
-      dataLog.info("repeatView", {
-        testId: testResult.testId,
-        summary: testResult.summary,
-        url: testResult.testUrl,
-        completed: new Date(testResult.completed).getTime(),
-        results: testResult.run.repeatView.results,
-        images: testResult.run.repeatView.images
-      });
-      logHarFile(testResult.testId);
     } else {
       dataLog.error("timeout", {
         testId: testResult.testId,
@@ -81,9 +72,31 @@ wpt.on("endTest", function(testResult) {
       });
     }
   } catch(e) {
-    console.log(e.description);
-    infoLog.error(e.description);
+    console.log(e);
+    infoLog.error(e);
   }
+  try {  
+    if (testResult.run.repeatView.results.docTime != 0) {
+      dataLog.info("repeatView", {
+        testId: testResult.testId,
+        summary: testResult.summary,
+        url: testResult.testUrl,
+        completed: new Date(testResult.completed).getTime(),
+        results: testResult.run.repeatView.results,
+        images: testResult.run.repeatView.images
+      });
+    } else {
+      dataLog.error("timeout", {
+        testId: testResult.testId,
+        summary: testResult.summary,
+        url: testResult.testUrl
+      });
+    }
+  } catch(e) {
+    console.log(e);
+    infoLog.error(e);
+  }
+  logHarFile(testResult.testId, testResult.testUrl);
 });
 
 infoLog.info("Starting batch, this may take awhile");
