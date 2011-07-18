@@ -39,9 +39,13 @@ var wpt = new WPT(config.apikey);
 var logHarFile = function(testId) {
   if (config.logHarFile === true) {
     wpt.getHARFile(testId, function(json) {
+      var startTime = new Date(json.log.pages[0].startedDateTime).getTime();
+      var onLoad = json.log.pages[0].pageTimings.onLoad;
       for (var i = 0, c = json.log.entries.length; i < c; i++) {
         var entry = json.log.entries[i];
-        dataLog.info("har", { testId: testId, url: entry.request.url, size: entry.response.bodySize, time: entry.time, status: entry.response.status });
+        var offsetTime = (new Date(entry.startedDateTime).getTime()) - startTime;
+        var beforeLoad = (offsetTime < onLoad);
+        dataLog.info("har", { testId: testId, url: entry.request.url, size: entry.response.bodySize, time: entry.time, status: entry.response.status, beforeLoad: beforeLoad, timings: entry.timings });
       }
     });
   }
