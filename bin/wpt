@@ -16,12 +16,15 @@ var config = (function(file) {
 }(args['--config'] || path.join(cwd, 'config.json')));
 
 
-var transports = [
-  //new (winston.transports.Console)()
-];
+var transports = [];
 
-if (config.transports && config.transports.splunk) {
-  transports.push(new Splunk(config.transports.splunk));
+if (config.transports) {
+  if (config.transports.splunk) {
+    transports.push(new Splunk(config.transports.splunk));
+  }
+  if (config.transports.console) {
+    transports.push(new (winston.transports.Console)());
+  }
 }
 
 var infoLog = new (winston.Logger)({
@@ -60,9 +63,9 @@ wpt.on("startTest", function(options, data) {
 wpt.on("endTest", function(testResult) {
   if (!testResult.run || !testResult.run.firstView) {
     infoLog.error(str.format("Test Incomplete: {url} {id} {summary}", { url: testResult.testUrl, id: testResult.testId, summary: testResult.summary }));
-    dataLog.info("incomplete", { url: testResult.testUrl, id: testResult.testId, summary: testResult.summary });
+    dataLog.info("incomplete", { url: testResult.testUrl, id: testResult.testId, summary: testResult.summary, location: testResult.location });
   } else {
-    infoLog.info(str.format("Test Complete: {url} {id} {summary}", { url: testResult.testUrl, id: testResult.testId, summary: testResult.summary }));
+    infoLog.info(str.format("Test Complete: {url} {location} {id} {summary}", { url: testResult.testUrl, id: testResult.testId, summary: testResult.summary, location: testResult.location }));
     try {
 
       if (testResult.run.firstView.results.docTime != 0) {
@@ -72,7 +75,8 @@ wpt.on("endTest", function(testResult) {
           url: testResult.testUrl,
           completed: new Date(testResult.completed).getTime(),
           results: testResult.run.firstView.results,
-          images: testResult.run.firstView.images
+          images: testResult.run.firstView.images,
+          location: testResult.location
         });
 
         if (testResult.run.repeatView.results.docTime != 0) {
@@ -82,7 +86,8 @@ wpt.on("endTest", function(testResult) {
             url: testResult.testUrl,
             completed: new Date(testResult.completed).getTime(),
             results: testResult.run.repeatView.results,
-            images: testResult.run.repeatView.images
+            images: testResult.run.repeatView.images,
+            location: testResult.location
           });
         }
       } else {
@@ -104,6 +109,10 @@ wpt.on("endTest", function(testResult) {
     }
     logHarFile(testResult);
   }
+});
+
+wpt.on('endBatch', function() {
+  console.log('Batch Complete');
 });
 
 infoLog.info("Starting batch, this may take awhile");
