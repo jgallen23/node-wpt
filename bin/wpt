@@ -36,27 +36,29 @@ var dataLog = new (winston.Logger)({
 
 var wpt = new WPT(config.apikey);
 
-var logHarFile = function(testId, url) {
+var logHarFile = function(test) {
   if (config.logHarFile === true) {
-    wpt.getHARFile(testId, function(json) {
+    wpt.getHARFile(test.testId, function(json) {
       var startTime = new Date(json.log.pages[0].startedDateTime).getTime();
       var onLoad = json.log.pages[0].pageTimings.onLoad;
       for (var i = 0, c = json.log.entries.length; i < c; i++) {
         var entry = json.log.entries[i];
-        var offsetTime = (new Date(entry.startedDateTime).getTime()) - startTime;
-        var beforeLoad = (offsetTime < onLoad);
-        dataLog.info("har", { testId: testId, testUrl: url, requestUrl: entry.request.url, url: entry.request.url, size: entry.response.bodySize, time: entry.time, status: entry.response.status, beforeLoad: beforeLoad, timings: entry.timings, offsetTime: offsetTime });
+        if (entry.pageref == "page_1_0") {
+          var offsetTime = (new Date(entry.startedDateTime).getTime()) - startTime;
+          var beforeLoad = (offsetTime < onLoad);
+          dataLog.info("har", { testId: test.testId, testUrl: test.testUrl, requestUrl: entry.request.url, url: entry.request.url, size: entry.response.bodySize, time: entry.time, status: entry.response.status, beforeLoad: beforeLoad, timings: entry.timings, offsetTime: offsetTime, location: test.location });
+        }
       }
     });
   }
 };
 
 wpt.on("startTest", function(options, data) {
-  infoLog.info(str.format("Test Started: {url} {id}", { url: options.url, id: data.data.testId }));
+  infoLog.info(str.format("Test Started: {url} {location} {id}", { url: options.url, location: options.location, id: data.data.testId }));
 });
 
 wpt.on("endTest", function(testResult) {
-  if (!testResult.run.firstView) {
+  if (!testResult.run || !testResult.run.firstView) {
     infoLog.error(str.format("Test Incomplete: {url} {id} {summary}", { url: testResult.testUrl, id: testResult.testId, summary: testResult.summary }));
     dataLog.info("incomplete", { url: testResult.testUrl, id: testResult.testId, summary: testResult.summary });
   } else {
@@ -83,8 +85,12 @@ wpt.on("endTest", function(testResult) {
             images: testResult.run.repeatView.images
           });
         }
-
       } else {
+        infoLog.error("timeout", {
+          testId: testResult.testId,
+          summary: testResult.summary,
+          url: testResult.testUrl
+        });
         dataLog.error("timeout", {
           testId: testResult.testId,
           summary: testResult.summary,
@@ -96,13 +102,13 @@ wpt.on("endTest", function(testResult) {
       infoLog.error(e);
       console.log(testResult.run);
     }
-    logHarFile(testResult.testId, testResult.testUrl);
+    logHarFile(testResult);
   }
 });
 
 infoLog.info("Starting batch, this may take awhile");
 var runBatch = function() {
-  wpt.runBatch(config.urls);
+  wpt.runBatch(config.urls, config.locations);
 };
 runBatch();
 //wpt.getResults("110614_6A_TW3Q");
