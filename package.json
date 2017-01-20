@@ -7,7 +7,7 @@
     "xml2js": "*",
     "str.js": "*",
     "argsparser": "*",
-    "winston": "*",
+    "winston": ">=2.3.1",
     "resistance": "*"
   },
   "bin": { "wpt": "./bin/wpt" }
